@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Bengals Game Day",
+  "description": "Live Bengals score, injuries and AFC North scores for game day.",
+  "appearance": {
+    "theme_color": "#FB4F14",
+    "icon": { "src": "../icons/bengals.svg", "type": "monochrome" }
+  }
+}

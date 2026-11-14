@@ -1,0 +1,6 @@
+{
+  "name": "bengals-glasses",
+  "private": true,
+  "type": "commonjs",
+  "scripts": { "test": "node --test tests/lib.test.js" }
+}
