@@ -145,7 +145,7 @@
 
   function renderHome(root) {
     var head = h('header', 'head');
-    head.appendChild(h('h1', null, 'Bengals Game Day'));
+    head.appendChild(h('h1', null, 'Who Dey GameDey'));
     head.appendChild(h('p', null, state.week ? 'Week ' + state.week : ''));
     root.appendChild(head);
     var g = myGame();
