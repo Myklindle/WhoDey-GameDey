@@ -18,6 +18,7 @@ body {
 .head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .head h1, .head p { margin: 0; font-size: 1.1rem; font-weight: 600; color: #cfcfcf; }
 .title { margin: 0; font-size: 1.1rem; font-weight: 600; color: #cfcfcf; }
+.screen > .button { flex: 0 0 auto; }
 .cards { display: flex; flex-direction: column; gap: 0.8rem; flex: 1 1 auto; min-block-size: 0; }
 .card {
   flex: 1 1 0; min-block-size: 0; max-block-size: 12rem;
@@ -58,6 +59,7 @@ body {
 .mini-row { display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800; }
 .mini-sub { font-size: 1rem; color: #cfcfcf; }
 .mini-sub.live { color: #fff; font-weight: 700; }
+.drm-line { margin: 0; padding-inline: 0.4rem; font-size: 1.15rem; font-weight: 600; }
 .stand { display: flex; justify-content: space-between; padding: 0.2rem 0.9rem; font-size: 1.2rem; font-weight: 600; }
 .stand.mine { color: #FB4F14; }
 /* Buttons */

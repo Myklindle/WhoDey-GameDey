@@ -160,6 +160,7 @@
     cards.appendChild(c1);
     cards.appendChild(c2);
     root.appendChild(cards);
+    root.appendChild(button('watch', 'Watch test', function () { go('watch'); }));
     root.appendChild(h('p', 'status', state.error || (state.updated ? 'Updated ' + timeText(state.updated) : 'Loading\u2026')));
   }
 
@@ -290,7 +291,61 @@
     root.appendChild(row);
   }
 
-  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision };
+  // ---------- watch test ----------
+  // Opens each service's own web player so you can sign in and see if the
+  // game plays. Also asks the browser which DRM it supports.
+  var SERVICES = [
+    { key: 'w-peacock', label: 'Peacock', url: 'https://www.peacocktv.com/sports/nfl' },
+    { key: 'w-nbc', label: 'NBC Sports', url: 'https://www.nbcsports.com/watch' },
+    { key: 'w-spectrum', label: 'Spectrum TV', url: 'https://watch.spectrum.net/livetv' }
+  ];
+  var drm = { checked: false, lines: [] };
+  function checkDrm() {
+    if (drm.checked) return;
+    drm.checked = true;
+    if (!navigator.requestMediaKeySystemAccess) {
+      drm.lines = ['No DRM support in this browser'];
+      render();
+      return;
+    }
+    var video = [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }];
+    var audio = [{ contentType: 'audio/mp4; codecs="mp4a.40.2"' }];
+    var tries = [
+      { name: 'Widevine (basic)', sys: 'com.widevine.alpha', robust: 'SW_SECURE_CRYPTO' },
+      { name: 'Widevine (hardware)', sys: 'com.widevine.alpha', robust: 'HW_SECURE_ALL' },
+      { name: 'PlayReady', sys: 'com.microsoft.playready', robust: '' }
+    ];
+    Promise.all(tries.map(function (t) {
+      var cfg = [{
+        initDataTypes: ['cenc'],
+        videoCapabilities: video.map(function (v) { return { contentType: v.contentType, robustness: t.robust }; }),
+        audioCapabilities: audio.map(function (a) { return { contentType: a.contentType, robustness: t.robust }; })
+      }];
+      return navigator.requestMediaKeySystemAccess(t.sys, cfg)
+        .then(function () { return t.name + ': yes'; })
+        .catch(function () { return t.name + ': no'; });
+    })).then(function (lines) {
+      drm.lines = lines;
+      render();
+    });
+  }
+  function renderWatch(root) {
+    root.appendChild(h('h1', 'title', 'Watch test'));
+    var list = h('div', 'list');
+    list.appendChild(h('h2', 'group', 'DRM on these glasses'));
+    if (!drm.lines.length) list.appendChild(h('p', 'hint', 'Checking\u2026'));
+    drm.lines.forEach(function (l) { list.appendChild(h('p', 'drm-line', l)); });
+    list.appendChild(h('h2', 'group', 'Open a player'));
+    SERVICES.forEach(function (s) {
+      list.appendChild(button(s.key, s.label, function () { location.assign(s.url); }));
+    });
+    list.appendChild(h('p', 'hint', 'Sign in with your own account. Use Back to return here.'));
+    root.appendChild(list);
+    root.appendChild(backButton());
+    checkDrm();
+  }
+
+  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, watch: renderWatch };
   function render() {
     var active = document.activeElement;
     var key = active && active.dataset ? active.dataset.key : null;
