@@ -120,7 +120,7 @@
     [g.away, g.home].forEach(function (t) {
       var row = h('div', 'score-row' + (t.abbr === MY ? ' mine' : ''));
       row.appendChild(h('span', 'poss', g.state === 'in' && g.possession === t.id ? '\u25B6' : ''));
-      row.appendChild(h('span', 'abbr', t.abbr));
+      row.appendChild(h('span', 'abbr t-' + t.abbr, t.abbr));
       row.appendChild(h('span', 'rec', t.record));
       row.appendChild(h('span', 'pts', g.state === 'pre' ? '' : t.score));
       wrap.appendChild(row);
@@ -254,11 +254,14 @@
   function miniGame(g) {
     var d = h('div', 'mini' + (L.hasTeam(g, MY) ? ' mine' : ''));
     var top = h('div', 'mini-row');
-    var left = g.away.abbr + ' ' + (g.state === 'pre' ? '' : g.away.score);
-    var right = g.home.abbr + ' ' + (g.state === 'pre' ? '' : g.home.score);
-    top.appendChild(h('span', null, left.trim()));
+    function side(t) {
+      var sp = h('span', 't-' + t.abbr);
+      sp.textContent = (t.abbr + ' ' + (g.state === 'pre' ? '' : t.score)).trim();
+      return sp;
+    }
+    top.appendChild(side(g.away));
     top.appendChild(h('span', null, '@'));
-    top.appendChild(h('span', null, right.trim()));
+    top.appendChild(side(g.home));
     d.appendChild(top);
     var sub = g.state === 'pre' ? kickoff(g.date) : g.detail;
     if (g.state === 'in') {
@@ -299,17 +302,18 @@
         return da - db;
       });
     }
+    if (!state.showLeague && state.standings.length) {
+      var grid = h('div', 'standings');
+      state.standings.forEach(function (r) {
+        var cell = h('div', 'stand t-' + r.abbr);
+        cell.appendChild(h('span', null, r.abbr));
+        cell.appendChild(h('span', null, r.w + '-' + r.l + (r.t ? '-' + r.t : '')));
+        grid.appendChild(cell);
+      });
+      list.appendChild(grid);
+    }
     if (!games.length) list.appendChild(h('p', 'big', state.error || 'No games this week'));
     games.forEach(function (g) { list.appendChild(miniGame(g)); });
-    if (!state.showLeague && state.standings.length) {
-      list.appendChild(h('h2', 'group', 'Standings'));
-      state.standings.forEach(function (r) {
-        var line = h('div', 'stand' + (r.abbr === MY ? ' mine' : ''));
-        line.appendChild(h('span', null, r.abbr));
-        line.appendChild(h('span', null, r.w + '-' + r.l + (r.t ? '-' + r.t : '')));
-        list.appendChild(line);
-      });
-    }
     root.appendChild(list);
     var row = h('div', 'controls two');
     row.appendChild(button('toggle', state.showLeague ? 'AFC North' : 'All games', function () {

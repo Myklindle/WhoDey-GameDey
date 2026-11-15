@@ -32,7 +32,6 @@ body {
 /* Game */
 .scoreboard { display: flex; flex-direction: column; gap: 0.3rem; background: #181818; border: 3px solid #6b6b6b; border-radius: 1rem; padding: 0.6rem 1rem; }
 .score-row { display: grid; grid-template-columns: 1.2rem 1fr auto 3.5rem; align-items: baseline; gap: 0.5rem; }
-.score-row.mine .abbr { color: #FB4F14; }
 .abbr { font-size: 2rem; font-weight: 800; }
 .rec { font-size: 1rem; color: #cfcfcf; }
 .pts { font-size: 2.6rem; font-weight: 800; text-align: end; }
@@ -59,8 +58,8 @@ body {
 .mini-row { display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800; }
 .mini-sub { font-size: 1rem; color: #cfcfcf; }
 .mini-sub.live { color: #fff; font-weight: 700; }
-.stand { display: flex; justify-content: space-between; padding: 0.2rem 0.9rem; font-size: 1.2rem; font-weight: 600; }
-.stand.mine { color: #FB4F14; }
+.standings { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; }
+.stand { display: flex; justify-content: space-between; padding: 0.3rem 0.9rem; font-size: 1.2rem; font-weight: 600; background: #181818; border: 2px solid #3a3a3a; border-radius: 0.8rem; }
 /* Buttons */
 .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
 .button {
@@ -71,3 +70,12 @@ body {
 .card:focus, .button:focus, .row:focus, .card:focus-visible, .button:focus-visible, .row:focus-visible {
   outline: 4px solid #fff; outline-offset: 3px; background: #3a3a3a; border-color: #fff;
 }
+/* AFC North team colors, lightened so they show on an additive display */
+.t-CIN { color: #FB4F14; }
+.t-CLE { color: #C98A5A; }
+.t-BAL { color: #A98BFF; }
+.t-PIT { color: #FFC20E; }
+.stand.t-CIN { border-color: #FB4F14; }
+.stand.t-CLE { border-color: #C98A5A; }
+.stand.t-BAL { border-color: #A98BFF; }
+.stand.t-PIT { border-color: #FFC20E; }
