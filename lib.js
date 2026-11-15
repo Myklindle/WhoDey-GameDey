@@ -72,6 +72,12 @@
     return plays.filter(function (p) { return INJURY_RE.test(p.text); });
   }
 
+  // Just the injury sentence(s) of a play's text, e.g. "NE-A.Brown was injured during the play."
+  function injuryNote(text) {
+    var parts = String(text || '').split(/\*\*|(?<=\.)\s+/).map(function (x) { return x.trim(); });
+    var hits = parts.filter(function (x) { return x && INJURY_RE.test(x); });
+    return (hits.length ? hits.join(' ') : String(text || '')).replace(/^Injury Update:\s*/i, 'Update: ');
+  }
   // Pregame injury report: [{team, abbr, players:[{id,name,pos,jersey,status,detail}]}]
   function injuriesFromSummary(sum) {
     return ((sum && sum.injuries) || []).map(function (t) {
@@ -249,7 +255,7 @@
   var api = {
     DIVISION: DIVISION, TENT_STATES: TENT_STATES,
     normalizeEvent: normalizeEvent, hasTeam: hasTeam,
-    playsFromSummary: playsFromSummary, injuryPlays: injuryPlays,
+    playsFromSummary: playsFromSummary, injuryPlays: injuryPlays, injuryNote: injuryNote,
     injuriesFromSummary: injuriesFromSummary, nextTent: nextTent, sortGames: sortGames,
     divisionStandings: divisionStandings, leagueStandings: leagueStandings,
     teamStats: teamStats, statComparison: statComparison, playerLeaders: playerLeaders,

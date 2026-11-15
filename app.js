@@ -19,6 +19,9 @@
     league: [],
     standView: 'AFC',
     playerTeam: '',
+    press: null,
+    pressError: '',
+    video: null,
     showLeague: false,
     liveOnly: false
   };
@@ -86,10 +89,18 @@
       .catch(function () { /* standings are optional */ });
   }
   var SUMMARY_SCREENS = ['game', 'stats', 'players', 'scoring', 'injuries', 'plays'];
+  function loadPress() {
+    return fetchJSON('press.json')
+      .then(function (d) { state.press = (d && d.items) || []; state.pressError = ''; })
+      .catch(function (e) { state.pressError = 'Could not load (' + e.message + ')'; });
+  }
   function refresh() {
+    // A playing video lives in the page; re-rendering would restart it.
+    if (state.screen === 'video') return Promise.resolve();
     var jobs = [loadScoreboard()];
     if (SUMMARY_SCREENS.indexOf(state.screen) >= 0) jobs.push(loadSummary());
     if (state.screen === 'division' || state.screen === 'standings') jobs.push(loadStandings());
+    if (state.screen === 'press') jobs.push(loadPress());
     return Promise.all(jobs).then(render);
   }
 
@@ -192,7 +203,10 @@
   }
   function renderGame(root) {
     var g = myGame();
-    root.appendChild(h('h1', 'title', 'Bengals Game Day'));
+    var titleRow = h('div', 'title-row');
+    titleRow.appendChild(h('h1', 'title', 'Bengals Game Day'));
+    titleRow.appendChild(button('back', 'Back', function () { history.back(); }, 'button small'));
+    root.appendChild(titleRow);
     if (!g) {
       root.appendChild(h('p', 'big', state.error || 'No Bengals game this week'));
       root.appendChild(backButton());
@@ -200,13 +214,8 @@
     }
     var info = h('div', 'list');
     info.appendChild(scoreLine(g));
-    if (g.state !== 'pre') info.appendChild(lineScore(g));
-    info.appendChild(h('p', 'when', gameStatus(g)));
-    if (g.state === 'in') {
-      var sit = [g.down, g.redZone ? 'RED ZONE' : ''].filter(Boolean).join('  ');
-      if (sit) info.appendChild(h('p', 'sit', sit));
-      if (g.lastPlay) info.appendChild(h('p', 'last', g.lastPlay));
-    }
+    var sit = g.state === 'in' ? [g.down, g.redZone ? 'RED ZONE' : ''].filter(Boolean).join('  ') : '';
+    info.appendChild(h('p', 'when', gameStatus(g) + (sit ? '   ' + sit : '')));
     var ex = L.gameExtras(state.summary);
     if (g.state === 'pre') {
       var bits = [ex.line ? 'Line ' + ex.line : '', ex.overUnder ? 'O/U ' + ex.overUnder : ''].filter(Boolean).join('   ');
@@ -216,8 +225,10 @@
     }
     var inj = L.injuryPlays(L.playsFromSummary(state.summary));
     if (g.state === 'in' && inj.length) {
-      info.appendChild(h('p', 'alert', 'Injury: ' + inj[inj.length - 1].text));
+      info.appendChild(h('p', 'alert', (function (n) { return (/^Update:/.test(n) ? 'Injury ' : 'Injury: ') + n; })(L.injuryNote(inj[inj.length - 1].text))));
     }
+    if (g.state !== 'pre') info.appendChild(lineScore(g));
+    if (g.state === 'in' && g.lastPlay) info.appendChild(h('p', 'last', g.lastPlay));
     var sc = L.scoringFromSummary(state.summary);
     if (g.state !== 'pre' && sc.length) {
       var lp = sc[sc.length - 1];
@@ -230,7 +241,7 @@
     row.appendChild(button('scoring', 'Scoring', function () { go('scoring'); }));
     row.appendChild(button('injuries', 'Injuries', function () { go('injuries'); }));
     row.appendChild(button('plays', 'Plays', function () { go('plays'); }));
-    row.appendChild(backButton());
+    row.appendChild(button('press', 'Press', function () { go('press'); }));
     root.appendChild(row);
   }
   function renderStats(root) {
@@ -316,6 +327,129 @@
     }
     root.appendChild(list);
     root.appendChild(backButton());
+  }
+  function renderPress(root) {
+    root.appendChild(h('h1', 'title', 'Press & highlights'));
+    var list = h('div', 'list');
+    if (!state.press) {
+      list.appendChild(h('p', 'big', state.pressError || 'Loading\u2026'));
+    } else if (!state.press.length) {
+      list.appendChild(h('p', 'big', 'Nothing posted yet'));
+    } else {
+      state.press.forEach(function (it) {
+        var b = button('v-' + it.videoId, '', function () {
+          state.video = it;
+          go('video');
+        }, 'row');
+        b.appendChild(h('span', 'row-sub', it.kind === 'highlights' ? 'HIGHLIGHTS' : 'PRESS CONFERENCE'));
+        b.appendChild(h('span', 'row-main', it.title.replace(/\s*\|.*$/, '')));
+        list.appendChild(b);
+      });
+    }
+    root.appendChild(list);
+    root.appendChild(backButton());
+  }
+  // ---------- video player (YouTube) ----------
+  var player = null, playerToken = 0, apiPromise = null, toggleBtn = null, statusEl = null;
+  function setVideoStatus(msg) {
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+    statusEl.hidden = !msg;
+  }
+  function loadYT() {
+    if (window.YT && window.YT.Player) return Promise.resolve();
+    if (apiPromise) return apiPromise;
+    apiPromise = new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { apiPromise = null; reject(new Error('timeout')); }, 8000);
+      var prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = function () {
+        clearTimeout(timer);
+        if (typeof prev === 'function') prev();
+        resolve();
+      };
+      var sc = document.createElement('script');
+      sc.src = 'https://www.youtube.com/iframe_api';
+      sc.async = true;
+      sc.onerror = function () { clearTimeout(timer); apiPromise = null; reject(new Error('load failed')); };
+      document.head.appendChild(sc);
+    });
+    return apiPromise;
+  }
+  function startPlayer() {
+    if (!state.video) return;
+    var token = ++playerToken;
+    var id = state.video.videoId;
+    loadYT().then(function () {
+      if (token !== playerToken || !document.getElementById('yt')) return;
+      var vars = { autoplay: 1, playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1 };
+      if (/^https?:$/.test(location.protocol)) vars.origin = location.origin;
+      document.getElementById('player-mount').classList.add('api');
+      player = new YT.Player('yt', {
+        width: '100%', height: '100%', videoId: id, playerVars: vars,
+        events: {
+          onReady: function () {
+            if (token !== playerToken) return;
+            try { player.getIframe().tabIndex = -1; } catch (e) { /* ignore */ }
+            setVideoStatus('');
+            player.playVideo();
+          },
+          onStateChange: function (e) {
+            if (token !== playerToken || !toggleBtn) return;
+            toggleBtn.textContent = (e.data === 1 || e.data === 3) ? 'Pause' : 'Play';
+            if (e.data === 1 || e.data === 3) setVideoStatus('');
+          },
+          onError: function (e) { if (token === playerToken) setVideoStatus("Can't play this video here (error " + e.data + ")."); }
+        }
+      });
+    }).catch(function () {
+      if (token !== playerToken) return;
+      var mount = document.getElementById('player-mount');
+      if (!mount) return;
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube.com/embed/' + encodeURIComponent(id) + '?autoplay=1&playsinline=1&rel=0';
+      f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      f.title = state.video.title;
+      mount.replaceChildren(f);
+      var c = document.querySelector('.player-controls');
+      if (c) c.hidden = true;
+      setVideoStatus('Basic player (YouTube API unavailable).');
+    });
+  }
+  function stopPlayer() {
+    playerToken++;
+    try { if (player && player.destroy) player.destroy(); } catch (e) { /* ignore */ }
+    player = null;
+    toggleBtn = null;
+    statusEl = null;
+  }
+  function seekBy(delta) {
+    if (!player || typeof player.getCurrentTime !== 'function') return;
+    var t = player.getCurrentTime() + delta;
+    var dur = player.getDuration();
+    if (dur) t = Math.min(t, dur - 1);
+    player.seekTo(Math.max(0, t), true);
+  }
+  function renderVideo(root) {
+    root.appendChild(h('h1', 'title', state.video ? state.video.title.replace(/\s*\|.*$/, '') : 'Video'));
+    var mount = h('div', 'video');
+    mount.id = 'player-mount';
+    var holder = h('div');
+    holder.id = 'yt';
+    mount.appendChild(holder);
+    root.appendChild(mount);
+    statusEl = h('p', 'status', 'Loading\u2026');
+    root.appendChild(statusEl);
+    var row = h('div', 'controls four player-controls');
+    row.appendChild(button('v-back', '\u221215s', function () { seekBy(-15); }));
+    toggleBtn = button('v-toggle', 'Pause', function () {
+      if (!player || typeof player.getPlayerState !== 'function') return;
+      var st = player.getPlayerState();
+      if (st === 1 || st === 3) player.pauseVideo(); else player.playVideo();
+    });
+    row.appendChild(toggleBtn);
+    row.appendChild(button('v-fwd', '+30s', function () { seekBy(30); }));
+    row.appendChild(backButton());
+    root.appendChild(row);
   }
   function renderInjuries(root) {
     var g = myGame();
@@ -471,7 +605,7 @@
     root.appendChild(row);
   }
 
-  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, scores: renderScores, standings: renderStandings, stats: renderStats, players: renderPlayers, scoring: renderScoring };
+  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, scores: renderScores, standings: renderStandings, stats: renderStats, players: renderPlayers, scoring: renderScoring, press: renderPress, video: renderVideo };
   function render() {
     var active = document.activeElement;
     var key = active && active.dataset ? active.dataset.key : null;
@@ -480,7 +614,9 @@
     app.textContent = '';
     var root = h('section', 'screen');
     (RENDERERS[state.screen] || renderHome)(root);
+    if (state.screen !== 'video') stopPlayer();
     app.appendChild(root);
+    if (state.screen === 'video') startPlayer();
     var next = key ? app.querySelector('[data-key="' + key + '"]') : null;
     if (!next) next = app.querySelector('button');
     var s = app.querySelector('.list');

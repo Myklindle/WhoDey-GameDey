@@ -74,3 +74,9 @@ test('leagueStandings returns every team with its conference, best first', () =>
   ] });
   assert.deepStrictEqual(out.map(r => r.abbr + ':' + r.conf), ['KC:AFC', 'PHI:NFC', 'CIN:AFC']);
 });
+test('injuryNote keeps only the injury sentence', () => {
+  assert.strictEqual(L.injuryNote("Pass short right (E.Ponder). DET-K.Dorsey was injured during the play. NE-A.Brown was injured during the play."),
+    'DET-K.Dorsey was injured during the play. NE-A.Brown was injured during the play.');
+  assert.strictEqual(L.injuryNote('J.Bates kicks 56 yards. ** Injury Update: DET-K.Dorsey has returned to the game.'),
+    'Update: DET-K.Dorsey has returned to the game.');
+});

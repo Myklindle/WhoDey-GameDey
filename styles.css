@@ -96,3 +96,11 @@ body {
 .group.other { color: #fff; }
 .pl-head { display: flex; align-items: baseline; gap: 0.6rem; }
 .play-name { font-size: 1.1rem; }
+/* Video */
+.video { inline-size: 100%; aspect-ratio: 16 / 9; background: #000; border: 2px solid #3a3a3a; border-radius: 0.6rem; overflow: hidden; flex: 0 0 auto; }
+.video iframe { inline-size: 100%; block-size: 100%; border: 0; display: block; }
+.video.api iframe { pointer-events: none; }
+.controls.four { grid-template-columns: repeat(4, 1fr); }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.button.small { min-block-size: 1.9rem; padding: 0.1rem 0.9rem; font-size: 1rem; border-width: 2px; border-radius: 0.7rem; }
+.list > * { flex-shrink: 0; }
