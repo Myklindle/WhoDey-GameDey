@@ -66,3 +66,11 @@ test('sortGames puts live first, then upcoming, then finals, Bengals first in a 
   ], 'CIN').map(x => x.id);
   assert.deepStrictEqual(out, ['l2', 'l', 'p1', 'p2', 'f']);
 });
+test('leagueStandings returns every team with its conference, best first', () => {
+  const e = (abbr, w, l, pct) => ({ team: { abbreviation: abbr }, stats: [{ name: 'wins', value: w }, { name: 'losses', value: l }, { name: 'winPercent', value: pct }] });
+  const out = L.leagueStandings({ children: [
+    { abbreviation: 'AFC', standings: { entries: [e('CIN', 6, 3, 0.667), e('KC', 8, 1, 0.889)] } },
+    { abbreviation: 'NFC', standings: { entries: [e('PHI', 7, 2, 0.778)] } }
+  ] });
+  assert.deepStrictEqual(out.map(r => r.abbr + ':' + r.conf), ['KC:AFC', 'PHI:NFC', 'CIN:AFC']);
+});

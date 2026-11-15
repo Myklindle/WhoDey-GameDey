@@ -122,12 +122,29 @@
     return rows;
   }
 
+  // All teams from a standings response: [{abbr, conf, w, l, t, pct}], best record first.
+  // Sorted by win percentage then wins; this is not the NFL's full tiebreaker order.
+  function leagueStandings(json) {
+    var rows = [];
+    ((json && json.children) || []).forEach(function (conf) {
+      var cname = conf.abbreviation || conf.name || '';
+      ((conf.standings && conf.standings.entries) || []).forEach(function (e) {
+        var abbr = e.team && e.team.abbreviation;
+        if (!abbr) return;
+        var s = {};
+        (e.stats || []).forEach(function (x) { s[x.name] = x.value; });
+        rows.push({ abbr: abbr, conf: cname, w: s.wins || 0, l: s.losses || 0, t: s.ties || 0, pct: s.winPercent || 0 });
+      });
+    });
+    rows.sort(function (a, b) { return b.pct - a.pct || b.w - a.w; });
+    return rows;
+  }
   var api = {
     DIVISION: DIVISION, TENT_STATES: TENT_STATES,
     normalizeEvent: normalizeEvent, hasTeam: hasTeam,
     playsFromSummary: playsFromSummary, injuryPlays: injuryPlays,
     injuriesFromSummary: injuriesFromSummary, nextTent: nextTent, sortGames: sortGames,
-    divisionStandings: divisionStandings
+    divisionStandings: divisionStandings, leagueStandings: leagueStandings
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;

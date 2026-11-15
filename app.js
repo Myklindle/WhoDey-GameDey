@@ -16,6 +16,8 @@
     summary: null,
     summaryError: '',
     standings: [],
+    league: [],
+    standView: 'AFC',
     showLeague: false,
     liveOnly: false
   };
@@ -79,13 +81,13 @@
   }
   function loadStandings() {
     return fetchJSON(STANDINGS)
-      .then(function (d) { state.standings = L.divisionStandings(d); })
+      .then(function (d) { state.standings = L.divisionStandings(d); state.league = L.leagueStandings(d); })
       .catch(function () { /* standings are optional */ });
   }
   function refresh() {
     var jobs = [loadScoreboard()];
     if (state.screen === 'injuries' || state.screen === 'plays' || state.screen === 'game') jobs.push(loadSummary());
-    if (state.screen === 'division') jobs.push(loadStandings());
+    if (state.screen === 'division' || state.screen === 'standings') jobs.push(loadStandings());
     return Promise.all(jobs).then(render);
   }
 
@@ -283,11 +285,37 @@
     games.forEach(function (g) { list.appendChild(miniGame(g)); });
     if (state.updated) list.appendChild(h('p', 'hint', 'Updated ' + timeText(state.updated)));
     root.appendChild(list);
-    var row = h('div', 'controls two');
+    var row = h('div', 'controls three');
     row.appendChild(button('live-toggle', state.liveOnly ? 'All games' : 'Live only', function () {
       state.liveOnly = !state.liveOnly;
       render();
     }));
+    row.appendChild(button('to-standings', 'Standings', function () { go('standings'); }));
+    row.appendChild(backButton());
+    root.appendChild(row);
+  }
+  var STAND_VIEWS = ['AFC', 'NFC', 'NFL'];
+  function renderStandings(root) {
+    var v = state.standView;
+    root.appendChild(h('h1', 'title', v === 'NFL' ? 'League standings' : v + ' standings'));
+    var list = h('div', 'list');
+    var rows = state.league.filter(function (r) { return v === 'NFL' || r.conf === v; });
+    if (!rows.length) {
+      list.appendChild(h('p', 'big', state.error || 'Loading\u2026'));
+    } else {
+      var grid = h('div', 'standings');
+      rows.forEach(function (r, i) {
+        var cell = h('div', 'stand t-' + r.abbr);
+        cell.appendChild(h('span', null, (i + 1) + ' ' + r.abbr));
+        cell.appendChild(h('span', null, r.w + '-' + r.l + (r.t ? '-' + r.t : '')));
+        grid.appendChild(cell);
+      });
+      list.appendChild(grid);
+    }
+    root.appendChild(list);
+    var row = h('div', 'controls two');
+    var next = STAND_VIEWS[(STAND_VIEWS.indexOf(v) + 1) % STAND_VIEWS.length];
+    row.appendChild(button('stand-toggle', next, function () { state.standView = next; render(); }));
     row.appendChild(backButton());
     root.appendChild(row);
   }
@@ -324,7 +352,7 @@
     root.appendChild(row);
   }
 
-  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, scores: renderScores };
+  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, scores: renderScores, standings: renderStandings };
   function render() {
     var active = document.activeElement;
     var key = active && active.dataset ? active.dataset.key : null;
