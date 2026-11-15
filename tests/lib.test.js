@@ -80,3 +80,9 @@ test('injuryNote keeps only the injury sentence', () => {
   assert.strictEqual(L.injuryNote('J.Bates kicks 56 yards. ** Injury Update: DET-K.Dorsey has returned to the game.'),
     'Update: DET-K.Dorsey has returned to the game.');
 });
+test('winChance reads the live series, else the pregame predictor, else null', () => {
+  assert.deepStrictEqual(L.winChance({ winprobability: [{ homeWinPercentage: 0.5 }, { homeWinPercentage: 0.714 }] }), { home: 71, away: 29 });
+  assert.deepStrictEqual(L.winChance({ winprobability: [], predictor: { homeTeam: { gameProjection: '70.5' }, awayTeam: { gameProjection: '29.2' } } }), { home: 71, away: 29 });
+  assert.strictEqual(L.winChance({}), null);
+  assert.strictEqual(L.winChance(null), null);
+});

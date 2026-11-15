@@ -217,9 +217,15 @@
     var sit = g.state === 'in' ? [g.down, g.redZone ? 'RED ZONE' : ''].filter(Boolean).join('  ') : '';
     info.appendChild(h('p', 'when', gameStatus(g) + (sit ? '   ' + sit : '')));
     var ex = L.gameExtras(state.summary);
+    var wc = g.state === 'post' ? null : L.winChance(state.summary);
+    if (wc) {
+      var wrow = h('p', 'sit win');
+      wrow.appendChild(h('span', 'win-label', 'Win chance'));
+      wrow.appendChild(teamSpan(g.away, g.away.abbr + ' ' + wc.away + '%'));
+      wrow.appendChild(teamSpan(g.home, g.home.abbr + ' ' + wc.home + '%'));
+      info.appendChild(wrow);
+    }
     if (g.state === 'pre') {
-      var bits = [ex.line ? 'Line ' + ex.line : '', ex.overUnder ? 'O/U ' + ex.overUnder : ''].filter(Boolean).join('   ');
-      if (bits) info.appendChild(h('p', 'sit', bits));
       var where = [ex.venue, ex.temp ? ex.temp + '\u00B0F' : ''].filter(Boolean).join('   ');
       if (where) info.appendChild(h('p', 'last', where));
     }
@@ -328,6 +334,22 @@
     root.appendChild(list);
     root.appendChild(backButton());
   }
+  var SHORT_MONTH = { January: 'Jan', February: 'Feb', March: 'Mar', April: 'Apr', June: 'Jun', July: 'Jul', August: 'Aug', September: 'Sep', October: 'Oct', November: 'Nov', December: 'Dec' };
+  // "Joe Burrow Press Conference - November 11" -> "Joe Burrow  Nov 11"
+  function shortTitle(it) {
+    var t = String(it.title || '').replace(/\s*\|.*$/, '');
+    if (it.kind === 'highlights') {
+      var hm = /highlights\s+vs\.?\s*(.+)$/i.exec(t);
+      return 'Highlights vs ' + (hm ? hm[1].replace(/^the\s+/i, '') : '');
+    }
+    var m = /^(.*?)\s*press conference\s*-?\s*(.*)$/i.exec(t);
+    if (!m) return t;
+    var who = m[1].replace(/^Cincinnati Bengals\s*/i, '').trim() || 'Bengals';
+    var when = m[2].replace(/^[A-Za-z]+/, function (w) { return SHORT_MONTH[w] || w; });
+    return who + '  ' + when;
+  }
+  // Rows that fit on one 600x600 screen without scrolling.
+  var PRESS_ROWS = 6;
   function renderPress(root) {
     root.appendChild(h('h1', 'title', 'Press & highlights'));
     var list = h('div', 'list');
@@ -336,13 +358,11 @@
     } else if (!state.press.length) {
       list.appendChild(h('p', 'big', 'Nothing posted yet'));
     } else {
-      state.press.forEach(function (it) {
-        var b = button('v-' + it.videoId, '', function () {
+      state.press.slice(0, PRESS_ROWS).forEach(function (it) {
+        var b = button('v-' + it.videoId, shortTitle(it), function () {
           state.video = it;
           go('video');
-        }, 'row');
-        b.appendChild(h('span', 'row-sub', it.kind === 'highlights' ? 'HIGHLIGHTS' : 'PRESS CONFERENCE'));
-        b.appendChild(h('span', 'row-main', it.title.replace(/\s*\|.*$/, '')));
+        }, 'row compact');
         list.appendChild(b);
       });
     }
@@ -430,7 +450,7 @@
     player.seekTo(Math.max(0, t), true);
   }
   function renderVideo(root) {
-    root.appendChild(h('h1', 'title', state.video ? state.video.title.replace(/\s*\|.*$/, '') : 'Video'));
+    root.appendChild(h('h1', 'title', state.video ? shortTitle(state.video) : 'Video'));
     var mount = h('div', 'video');
     mount.id = 'player-mount';
     var holder = h('div');

@@ -239,18 +239,37 @@
       };
     });
   }
-  // Betting line, venue and weather for the game screen.
+  // Venue and weather for the game screen.
   function gameExtras(sum) {
-    var pc = sum && sum.pickcenter && sum.pickcenter[0];
     var gi = (sum && sum.gameInfo) || {};
     var v = gi.venue || {};
     var w = gi.weather || {};
     return {
-      line: pc && pc.details ? pc.details : '',
-      overUnder: pc && pc.overUnder ? String(pc.overUnder) : '',
       venue: v.fullName || '',
       temp: w.temperature != null ? String(w.temperature) : ''
     };
+  }
+  // Win chance in whole percent: {home, away}. Live games use the newest point of ESPN's
+  // win-probability series; before kickoff, ESPN's matchup predictor. Null when unavailable.
+  function winChance(sum) {
+    if (!sum) return null;
+    var wp = sum.winprobability;
+    if (Array.isArray(wp) && wp.length) {
+      var last = wp[wp.length - 1];
+      if (last && typeof last.homeWinPercentage === 'number') {
+        var h = Math.round(last.homeWinPercentage * 100);
+        return { home: h, away: 100 - h };
+      }
+    }
+    var pr = sum.predictor;
+    if (pr && pr.homeTeam && pr.awayTeam) {
+      var ph = parseFloat(pr.homeTeam.gameProjection), pa = parseFloat(pr.awayTeam.gameProjection);
+      if (!isNaN(ph) && !isNaN(pa)) {
+        var hr = Math.round(ph);
+        return { home: hr, away: 100 - hr };
+      }
+    }
+    return null;
   }
   var api = {
     DIVISION: DIVISION, TENT_STATES: TENT_STATES,
@@ -259,7 +278,7 @@
     injuriesFromSummary: injuriesFromSummary, nextTent: nextTent, sortGames: sortGames,
     divisionStandings: divisionStandings, leagueStandings: leagueStandings,
     teamStats: teamStats, statComparison: statComparison, playerLeaders: playerLeaders,
-    scoringFromSummary: scoringFromSummary, gameExtras: gameExtras
+    scoringFromSummary: scoringFromSummary, gameExtras: gameExtras, winChance: winChance
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
