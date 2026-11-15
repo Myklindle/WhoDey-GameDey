@@ -18,6 +18,7 @@
     standings: [],
     league: [],
     standView: 'AFC',
+    playerTeam: '',
     showLeague: false,
     liveOnly: false
   };
@@ -84,9 +85,10 @@
       .then(function (d) { state.standings = L.divisionStandings(d); state.league = L.leagueStandings(d); })
       .catch(function () { /* standings are optional */ });
   }
+  var SUMMARY_SCREENS = ['game', 'stats', 'players', 'scoring', 'injuries', 'plays'];
   function refresh() {
     var jobs = [loadScoreboard()];
-    if (state.screen === 'injuries' || state.screen === 'plays' || state.screen === 'game') jobs.push(loadSummary());
+    if (SUMMARY_SCREENS.indexOf(state.screen) >= 0) jobs.push(loadSummary());
     if (state.screen === 'division' || state.screen === 'standings') jobs.push(loadStandings());
     return Promise.all(jobs).then(render);
   }
@@ -154,7 +156,7 @@
     var g = myGame();
     var cards = h('div', 'cards');
     var c1 = button('c-game', '', function () { go('game'); }, 'card');
-    c1.appendChild(h('span', 'card-name', 'My Game'));
+    c1.appendChild(h('span', 'card-name', 'Bengals Game Day'));
     c1.appendChild(h('span', 'card-sub', homeSub(g)));
     var live = divisionGames().filter(function (e) { return e.state === 'in'; }).length;
     var c2 = button('c-div', '', function () { go('division'); }, 'card');
@@ -171,33 +173,150 @@
     root.appendChild(h('p', 'status', state.error || (state.updated ? 'Updated ' + timeText(state.updated) : 'Loading\u2026')));
   }
 
+  function teamSpan(t, text) {
+    return h('span', 't-' + t.abbr, text == null ? t.abbr : text);
+  }
+  function lineScore(g) {
+    var n = Math.max(4, g.away.lines.length, g.home.lines.length);
+    var tbl = h('div', 'linescore');
+    tbl.style.gridTemplateColumns = '3.2rem repeat(' + (n + 1) + ', 1fr)';
+    tbl.appendChild(h('span', 'ls-h', ''));
+    for (var i = 0; i < n; i++) tbl.appendChild(h('span', 'ls-h', i < 4 ? String(i + 1) : 'OT'));
+    tbl.appendChild(h('span', 'ls-h', 'T'));
+    [g.away, g.home].forEach(function (t) {
+      tbl.appendChild(teamSpan(t));
+      for (var k = 0; k < n; k++) tbl.appendChild(h('span', null, t.lines[k] != null ? t.lines[k] : '-'));
+      tbl.appendChild(h('span', 'ls-t', t.score));
+    });
+    return tbl;
+  }
   function renderGame(root) {
     var g = myGame();
-    root.appendChild(h('h1', 'title', 'My Game'));
+    root.appendChild(h('h1', 'title', 'Bengals Game Day'));
     if (!g) {
       root.appendChild(h('p', 'big', state.error || 'No Bengals game this week'));
       root.appendChild(backButton());
       return;
     }
-    root.appendChild(scoreLine(g));
-    root.appendChild(h('p', 'when', gameStatus(g)));
+    var info = h('div', 'list');
+    info.appendChild(scoreLine(g));
+    if (g.state !== 'pre') info.appendChild(lineScore(g));
+    info.appendChild(h('p', 'when', gameStatus(g)));
     if (g.state === 'in') {
       var sit = [g.down, g.redZone ? 'RED ZONE' : ''].filter(Boolean).join('  ');
-      if (sit) root.appendChild(h('p', 'sit', sit));
-      if (g.lastPlay) root.appendChild(h('p', 'last', g.lastPlay));
+      if (sit) info.appendChild(h('p', 'sit', sit));
+      if (g.lastPlay) info.appendChild(h('p', 'last', g.lastPlay));
+    }
+    var ex = L.gameExtras(state.summary);
+    if (g.state === 'pre') {
+      var bits = [ex.line ? 'Line ' + ex.line : '', ex.overUnder ? 'O/U ' + ex.overUnder : ''].filter(Boolean).join('   ');
+      if (bits) info.appendChild(h('p', 'sit', bits));
+      var where = [ex.venue, ex.temp ? ex.temp + '\u00B0F' : ''].filter(Boolean).join('   ');
+      if (where) info.appendChild(h('p', 'last', where));
     }
     var inj = L.injuryPlays(L.playsFromSummary(state.summary));
     if (g.state === 'in' && inj.length) {
-      var p = inj[inj.length - 1];
-      root.appendChild(h('p', 'alert', 'Injury: ' + p.text));
+      info.appendChild(h('p', 'alert', 'Injury: ' + inj[inj.length - 1].text));
     }
-    var row = h('div', 'controls two');
+    var sc = L.scoringFromSummary(state.summary);
+    if (g.state !== 'pre' && sc.length) {
+      var lp = sc[sc.length - 1];
+      info.appendChild(h('p', 'last', 'Last score: ' + lp.abbr + ' ' + lp.type + ' Q' + lp.period + ' ' + lp.clock));
+    }
+    root.appendChild(info);
+    var row = h('div', 'controls three');
+    row.appendChild(button('stats', 'Stats', function () { go('stats'); }));
+    row.appendChild(button('players', 'Players', function () { go('players'); }));
+    row.appendChild(button('scoring', 'Scoring', function () { go('scoring'); }));
     row.appendChild(button('injuries', 'Injuries', function () { go('injuries'); }));
     row.appendChild(button('plays', 'Plays', function () { go('plays'); }));
+    row.appendChild(backButton());
     root.appendChild(row);
+  }
+  function renderStats(root) {
+    var g = myGame();
+    root.appendChild(h('h1', 'title', 'Team stats'));
+    var list = h('div', 'list');
+    if (!g) {
+      list.appendChild(h('p', 'big', 'No game this week'));
+    } else if (!state.summary) {
+      list.appendChild(h('p', 'big', state.summaryError || 'Loading\u2026'));
+    } else {
+      var cmp = L.statComparison(state.summary, g.away.abbr, g.home.abbr);
+      var head = h('div', 'cmp cmp-head');
+      head.appendChild(teamSpan(g.away));
+      head.appendChild(h('span', 'cmp-label', cmp.mode === 'season' ? 'Season avg' : ''));
+      head.appendChild(teamSpan(g.home));
+      list.appendChild(head);
+      if (!cmp.rows.length) list.appendChild(h('p', 'big', 'No stats yet'));
+      cmp.rows.forEach(function (r) {
+        var d = h('div', 'cmp');
+        d.appendChild(h('span', 'cmp-val', r.away));
+        d.appendChild(h('span', 'cmp-label', r.label));
+        d.appendChild(h('span', 'cmp-val', r.home));
+        list.appendChild(d);
+      });
+    }
+    root.appendChild(list);
     root.appendChild(backButton());
   }
-
+  function renderPlayers(root) {
+    var g = myGame();
+    root.appendChild(h('h1', 'title', 'Players'));
+    var list = h('div', 'list');
+    var teams = L.playerLeaders(state.summary);
+    var other = g ? (g.home.abbr === MY ? g.away.abbr : g.home.abbr) : '';
+    var which = state.playerTeam || MY;
+    var tm = teams.filter(function (t) { return t.abbr === which; })[0];
+    if (!g) {
+      list.appendChild(h('p', 'big', 'No game this week'));
+    } else if (!state.summary) {
+      list.appendChild(h('p', 'big', state.summaryError || 'Loading\u2026'));
+    } else if (!tm || !tm.lines.length) {
+      list.appendChild(h('p', 'big', 'Player stats start at kickoff'));
+    } else {
+      list.appendChild(h('h2', 'group' + (which === MY ? '' : ' other'), which));
+      tm.lines.forEach(function (ln) {
+        var d = h('div', 'play');
+        var hd = h('div', 'pl-head');
+        hd.appendChild(h('span', 'play-time', ln.pos));
+        hd.appendChild(h('span', 'play-name', ln.name));
+        d.appendChild(hd);
+        d.appendChild(h('span', 'play-text', ln.text));
+        list.appendChild(d);
+      });
+    }
+    root.appendChild(list);
+    var row = h('div', 'controls two');
+    if (other) {
+      var next = which === MY ? other : MY;
+      row.appendChild(button('player-team', next, function () { state.playerTeam = next; render(); }));
+    }
+    row.appendChild(backButton());
+    root.appendChild(row);
+  }
+  function renderScoring(root) {
+    root.appendChild(h('h1', 'title', 'Scoring'));
+    var list = h('div', 'list');
+    var gm = myGame();
+    var plays = L.scoringFromSummary(state.summary).slice().reverse();
+    if (!state.summary) {
+      list.appendChild(h('p', 'big', state.summaryError || 'Loading\u2026'));
+    } else if (!plays.length) {
+      list.appendChild(h('p', 'big', 'No scoring yet'));
+    } else {
+      plays.forEach(function (p) {
+        var d = h('div', 'play');
+        var top = h('span', 'play-time t-' + p.abbr, p.abbr + ' ' + p.type + '  Q' + p.period + ' ' + p.clock);
+        d.appendChild(top);
+        d.appendChild(h('span', 'play-text', p.text));
+        d.appendChild(h('span', 'play-time', (gm ? gm.away.abbr + ' ' + p.away + '   ' + gm.home.abbr + ' ' + p.home : p.away + ' - ' + p.home)));
+        list.appendChild(d);
+      });
+    }
+    root.appendChild(list);
+    root.appendChild(backButton());
+  }
   function renderInjuries(root) {
     var g = myGame();
     root.appendChild(h('h1', 'title', 'Injuries'));
@@ -352,7 +471,7 @@
     root.appendChild(row);
   }
 
-  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, scores: renderScores, standings: renderStandings };
+  var RENDERERS = { home: renderHome, game: renderGame, injuries: renderInjuries, plays: renderPlays, division: renderDivision, scores: renderScores, standings: renderStandings, stats: renderStats, players: renderPlayers, scoring: renderScoring };
   function render() {
     var active = document.activeElement;
     var key = active && active.dataset ? active.dataset.key : null;

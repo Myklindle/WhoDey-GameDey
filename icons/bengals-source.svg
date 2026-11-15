@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs><mask id="m"><rect width="64" height="64" fill="#000"/><circle cx="32" cy="32" r="29" fill="#fff"/><g fill="#000"><path d="M-6 4C10 5 22 7 34 10C22 13 10 13 -6 15Z"/><path d="M-6 19C10 20 28 23 40 26C28 29 10 27 -6 29Z"/><path d="M-6 33C10 34 21 38 33 41C21 44 10 41 -6 43Z"/><path d="M-6 47C10 48 15 53 27 56C15 59 10 55 -6 57Z"/><path d="M70 11C54 12 42 13 30 16C42 19 54 19 70 21Z"/><path d="M70 26C54 27 36 30 24 33C36 36 54 34 70 36Z"/><path d="M70 40C54 41 43 44 31 47C43 50 54 48 70 50Z"/><path d="M70 54C54 55 48 57 36 60C48 63 54 62 70 64Z"/></g></mask></defs>
+  <rect width="64" height="64" fill="#000" mask="url(#m)"/>
+</svg>

@@ -12,5 +12,5 @@ Live at https://myklindle.github.io/WhoDey-GameDey/
 
 ## Files
 - `index.html`, `styles.css`, `app.js`: the app. `lib.js`: data parsing, tested with `npm test`.
-- `.well-known/meta-wearables-manifest.json`, `icons/bengals.svg`: name and icon the glasses read.
+- `.well-known/meta-wearables-manifest.json`, `icons/bengals.png` (source: `icons/bengals-source.svg`): name and icon the glasses read.
 - `.github/workflows/pages.yml`: deploys to GitHub Pages on every push to `main`.
