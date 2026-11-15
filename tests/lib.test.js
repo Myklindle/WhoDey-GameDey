@@ -55,3 +55,14 @@ test('divisionStandings keeps only AFC North, best first', () => {
   const json = { children: [{ standings: { entries: [mk('BUF', 8, 1, 0.89), mk('PIT', 5, 3, 0.62), mk('CIN', 6, 2, 0.75)] } }] };
   assert.deepStrictEqual(L.divisionStandings(json).map((r) => r.abbr), ['CIN', 'PIT']);
 });
+test('sortGames puts live first, then upcoming, then finals, Bengals first in a group', () => {
+  const g = (id, state, date, a, h) => ({ id, state, date, home: { abbr: h }, away: { abbr: a } });
+  const out = L.sortGames([
+    g('f', 'post', '2026-11-15T17:00Z', 'NE', 'NYJ'),
+    g('p2', 'pre', '2026-11-15T21:00Z', 'DAL', 'PHI'),
+    g('p1', 'pre', '2026-11-15T18:00Z', 'GB', 'CHI'),
+    g('l', 'in', '2026-11-15T17:00Z', 'MIA', 'BUF'),
+    g('l2', 'in', '2026-11-15T17:00Z', 'PIT', 'CIN')
+  ], 'CIN').map(x => x.id);
+  assert.deepStrictEqual(out, ['l2', 'l', 'p1', 'p2', 'f']);
+});

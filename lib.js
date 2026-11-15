@@ -92,6 +92,18 @@
     });
   }
 
+  // Live games first, then upcoming by kickoff, then finals. Bengals first within a group.
+  function sortGames(games, mine) {
+    var rank = { 'in': 0, pre: 1, post: 2 };
+    return games.slice().sort(function (a, b) {
+      var ra = rank[a.state] == null ? 1 : rank[a.state];
+      var rb = rank[b.state] == null ? 1 : rank[b.state];
+      if (ra !== rb) return ra - rb;
+      var ma = hasTeam(a, mine) ? 0 : 1, mb = hasTeam(b, mine) ? 0 : 1;
+      if (ma !== mb) return ma - mb;
+      return (Date.parse(a.date) || 0) - (Date.parse(b.date) || 0);
+    });
+  }
   function nextTent(i) { return (i + 1) % TENT_STATES.length; }
 
   // Standings rows for the division, best record first.
@@ -114,7 +126,7 @@
     DIVISION: DIVISION, TENT_STATES: TENT_STATES,
     normalizeEvent: normalizeEvent, hasTeam: hasTeam,
     playsFromSummary: playsFromSummary, injuryPlays: injuryPlays,
-    injuriesFromSummary: injuriesFromSummary, nextTent: nextTent,
+    injuriesFromSummary: injuriesFromSummary, nextTent: nextTent, sortGames: sortGames,
     divisionStandings: divisionStandings
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

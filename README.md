@@ -1,6 +1,6 @@
 # WhoDey GameDey (Meta Ray-Ban Display web app)
 
-Live Bengals score, down and distance, injury report with your own "in tent / out / back in" notes, latest plays, AFC North scores and standings, and a watch test for official streaming players. Data comes from ESPN's public JSON endpoints (unofficial, no key), polled every 20 seconds.
+Live Bengals score, down and distance, injury report with your own "in tent / out / back in" notes, latest plays, AFC North scores and standings, and live scores for all NFL games. Data comes from ESPN's public JSON endpoints (unofficial, no key), polled every 20 seconds.
 
 Live at https://myklindle.github.io/WhoDey-GameDey/
 
