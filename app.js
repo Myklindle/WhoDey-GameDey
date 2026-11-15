@@ -162,7 +162,7 @@
     c2.appendChild(h('span', 'card-sub', live ? live + ' live now' : 'Scores and standings'));
     var nLive = normalizedEvents().filter(function (e) { return e.state === 'in'; }).length;
     var c3 = button('c-scores', '', function () { go('scores'); }, 'card');
-    c3.appendChild(h('span', 'card-name', 'NFL Scores'));
+    c3.appendChild(h('span', 'card-name', 'NFL Scores and Standings'));
     c3.appendChild(h('span', 'card-sub', nLive ? nLive + ' live now' : 'All games this week'));
     cards.appendChild(c1);
     cards.appendChild(c2);
